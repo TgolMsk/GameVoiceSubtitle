@@ -9,6 +9,7 @@ import { AudioCapture, checkPlatformSupport } from './audio/capture';
 import { Resampler, frameRms, frameToBuffer } from './audio/resampler';
 import { VadGate } from './audio/vad';
 import { GummyClient } from './asr/gummyClient';
+import { translateSentence } from './asr/translator';
 import { SubtitleStore } from './store/subtitleStore';
 import { OverlayWindow } from './windows/overlayWindow';
 import { SettingsWindow } from './windows/settingsWindow';
@@ -73,6 +74,7 @@ class AppRuntime {
         onResult: (result) => {
           logger.debug(`result: ${JSON.stringify(result)}`);
           this.subtitles.applyResult(result);
+          this.maybeTranslate(result);
         },
         onStateChange: (state, errorMessage, authFailed) => this.onConnectionState(state, errorMessage, authFailed),
         onTaskFailed: (code, message, authFailed) => {
@@ -90,7 +92,12 @@ class AppRuntime {
       },
       () => {
         const c = configStore.get();
-        return { apiKey: c.apiKey.trim(), sourceLanguage: c.sourceLanguage, targetLanguage: c.targetLanguage };
+        return {
+          apiKey: c.apiKey.trim(),
+          engine: c.asrEngine,
+          sourceLanguage: c.sourceLanguage,
+          targetLanguage: c.targetLanguage,
+        };
       },
     );
 
@@ -189,6 +196,27 @@ class AppRuntime {
     const c = configStore.get();
     this.resampler.reset();
     this.capture.start(c.captureProcessId, c.captureProcessTree);
+  }
+
+  /**
+   * Paraformer path: the ASR result carries no translation, so final sentences
+   * are sent to qwen-mt and the translation is merged back into the same
+   * subtitle entry when it arrives (the overlay shows the source text until then).
+   */
+  private maybeTranslate(result: import('./asr/types').GummyResultEvent): void {
+    const c = configStore.get();
+    if (c.asrEngine !== 'paraformer') return;
+    const s = result.transcription;
+    if (!s || !s.sentence_end || !s.text.trim()) return;
+    void translateSentence(s.text, c.targetLanguage, c.apiKey.trim()).then((translated) => {
+      if (!translated) return;
+      this.subtitles.applyResult({
+        taskId: result.taskId,
+        translations: [
+          { sentence_id: s.sentence_id, lang: c.targetLanguage, text: translated, sentence_end: true },
+        ],
+      });
+    });
   }
 
   private onCaptureData(chunk: Buffer): void {

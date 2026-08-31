@@ -3,6 +3,7 @@ import type { AppConfig } from '@shared/types';
 
 const defaults: AppConfig = {
   apiKey: '',
+  asrEngine: 'paraformer',
   captureProcessId: null,
   captureProcessName: null,
   captureProcessTree: true,

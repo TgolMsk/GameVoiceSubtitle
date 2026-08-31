@@ -34,6 +34,11 @@ const zh = {
   systemModeWarning: '当前为全系统模式,游戏音效可能影响识别,建议改用虚拟声卡或选择语音软件进程。',
   platformWarning: '进程级采集需要 Windows 10 x64 2004 及以上版本。',
   secLanguage: '语言',
+  engineLabel: '识别引擎',
+  engineGummy: 'Gummy(识别+翻译一体)',
+  engineParaformer: 'Paraformer v2 + qwen-mt 翻译',
+  engineParaformerHint:
+    'Paraformer 只做识别,句子定稿后由 qwen-mt-turbo 翻译并替换原文(费用另计,约 ¥2/百万 token)。',
   sourceLanguage: '源语言',
   targetLanguage: '目标语言(单选)',
   autoDetect: '自动检测',
@@ -107,6 +112,11 @@ const en: typeof zh = {
     'System-wide mode: game sounds may pollute recognition. Prefer a virtual audio device or pick the voice app process.',
   platformWarning: 'Process capture requires Windows 10 x64 2004 or newer.',
   secLanguage: 'Languages',
+  engineLabel: 'ASR engine',
+  engineGummy: 'Gummy (ASR + translation)',
+  engineParaformer: 'Paraformer v2 + qwen-mt',
+  engineParaformerHint:
+    'Paraformer is ASR-only; final sentences are translated by qwen-mt-turbo (billed separately, ~¥2 per million tokens).',
   sourceLanguage: 'Source language',
   targetLanguage: 'Target language (single)',
   autoDetect: 'Auto detect',

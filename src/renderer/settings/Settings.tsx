@@ -148,6 +148,19 @@ export function Settings() {
 
         {/* Languages */}
         <Section title={tr('secLanguage')}>
+          <Row label={tr('engineLabel')}>
+            <select
+              className={inputCls}
+              value={config.asrEngine}
+              onChange={(e) => update({ asrEngine: e.target.value as AppConfig['asrEngine'] })}
+            >
+              <option value="paraformer">{tr('engineParaformer')}</option>
+              <option value="gummy">{tr('engineGummy')}</option>
+            </select>
+          </Row>
+          {config.asrEngine === 'paraformer' && (
+            <Hint color="text-slate-400">{tr('engineParaformerHint')}</Hint>
+          )}
           <Row label={tr('sourceLanguage')}>
             <select
               className={inputCls}

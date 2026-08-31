@@ -59,8 +59,16 @@ export type TargetLanguage = Exclude<SourceLanguage, 'auto'>;
 
 export type SubtitlePosition = 'top' | 'middle' | 'bottom';
 
+/**
+ * gummy      — gummy-realtime-v1: ASR + translation in one streaming task.
+ * paraformer — paraformer-realtime-v2: ASR only; finals are translated
+ *              separately via qwen-mt-turbo.
+ */
+export type AsrEngine = 'gummy' | 'paraformer';
+
 export interface AppConfig {
   apiKey: string;
+  asrEngine: AsrEngine;
   /** PID of the process to capture; null means "system audio". */
   captureProcessId: number | null;
   captureProcessName: string | null;

@@ -1,11 +1,11 @@
 import WebSocket from 'ws';
 import { randomUUID } from 'crypto';
-import type { ConnectionState } from '@shared/types';
+import type { AsrEngine, ConnectionState } from '@shared/types';
 import { logger } from '../logger';
 import {
   DownstreamMessage,
+  ENGINE_MODELS,
   FinishTaskMessage,
-  GUMMY_MODEL,
   GUMMY_WS_URL,
   GummyResultEvent,
   RunTaskMessage,
@@ -32,6 +32,7 @@ export interface GummyClientEvents {
 
 export interface GummyParams {
   apiKey: string;
+  engine: AsrEngine;
   sourceLanguage: string; // 'auto' or ISO code
   targetLanguage: string;
 }
@@ -58,6 +59,10 @@ export class GummyClient {
   private flushTimer: NodeJS.Timeout | null = null;
   /** Segment ended before task-started arrived — finish as soon as it does. */
   private finishPending = false;
+  /** Engine the current task was started with (params may change mid-connection). */
+  private taskEngine: AsrEngine = 'gummy';
+  /** Paraformer sends no sentence_id — synthesize one, bumped on each sentence_end. */
+  private sentenceCounter = 0;
 
   private keepaliveTimer: NodeJS.Timeout | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
@@ -218,27 +223,38 @@ export class GummyClient {
     this.taskPhase = 'starting';
     this.finishPending = false;
     this.sendQueue = [];
-    const { sourceLanguage, targetLanguage } = this.getParams();
+    this.sentenceCounter = 0;
+    const { engine, sourceLanguage, targetLanguage } = this.getParams();
+    this.taskEngine = engine;
+    const parameters: Record<string, unknown> =
+      engine === 'paraformer'
+        ? {
+            sample_rate: 16000,
+            format: 'pcm',
+            // v2 accepts optional language hints; 'auto' means no hint.
+            ...(sourceLanguage !== 'auto' ? { language_hints: [sourceLanguage] } : {}),
+          }
+        : {
+            sample_rate: 16000,
+            format: 'pcm',
+            transcription_enabled: true,
+            translation_enabled: true,
+            translation_target_languages: [targetLanguage],
+            source_language: sourceLanguage,
+          };
     const msg: RunTaskMessage = {
       header: { action: 'run-task', task_id: this.taskId, streaming: 'duplex' },
       payload: {
-        model: GUMMY_MODEL,
+        model: ENGINE_MODELS[engine],
         task_group: 'audio',
         task: 'asr',
         function: 'recognition',
-        parameters: {
-          sample_rate: 16000,
-          format: 'pcm',
-          transcription_enabled: true,
-          translation_enabled: true,
-          translation_target_languages: [targetLanguage],
-          ...(sourceLanguage !== 'auto' ? { source_language: sourceLanguage } : { source_language: 'auto' }),
-        },
+        parameters,
         input: {},
       },
     };
     this.ws.send(JSON.stringify(msg));
-    logger.debug(`run-task sent (${this.taskId})`);
+    logger.debug(`run-task sent (${this.taskId}, ${ENGINE_MODELS[engine]})`);
     return true;
   }
 
@@ -323,11 +339,31 @@ export class GummyClient {
       case 'result-generated': {
         const output = msg.payload?.output;
         if (!output) return;
-        this.events.onResult({
-          taskId: task_id,
-          transcription: output.transcription,
-          translations: output.translations,
-        });
+        if (this.taskEngine === 'paraformer') {
+          const sentence = output.sentence;
+          if (!sentence || typeof sentence.text !== 'string') return;
+          // Partials have end_time null; a completed sentence sets sentence_end
+          // (and/or a real end_time). Synthesize a stable per-task sentence id.
+          const isFinal = sentence.sentence_end === true || (sentence.end_time ?? null) !== null;
+          const sentenceId = this.sentenceCounter;
+          if (isFinal) this.sentenceCounter++;
+          this.events.onResult({
+            taskId: task_id,
+            transcription: {
+              sentence_id: sentenceId,
+              begin_time: sentence.begin_time,
+              end_time: sentence.end_time,
+              text: sentence.text,
+              sentence_end: isFinal,
+            },
+          });
+        } else {
+          this.events.onResult({
+            taskId: task_id,
+            transcription: output.transcription,
+            translations: output.translations,
+          });
+        }
         break;
       }
       case 'task-finished': {

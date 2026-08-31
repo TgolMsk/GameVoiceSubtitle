@@ -1,15 +1,24 @@
 # GameVoiceSubtitle
 
-游戏队友语音实时翻译字幕 Overlay(Windows)。实时捕获语音软件(Discord / YY / KOOK …)里队友说话的声音,经 Silero VAD 过滤后交给阿里云百炼 Gummy(`gummy-realtime-v1`)流式识别 + 翻译,以半透明穿透字幕叠加显示在游戏画面上。
+游戏队友语音实时翻译字幕 Overlay(Windows)。实时捕获语音软件(Discord / YY / KOOK …)里队友说话的声音,经 Silero VAD 过滤后交给阿里云百炼流式识别 + 翻译,以半透明穿透字幕叠加显示在游戏画面上。
 
 ```
 语音软件进程 → WASAPI 进程级 loopback (48k/16bit/stereo)
             → 重采样 16k/mono/20ms 帧
             → Silero VAD(只有人声段才上行,没人说话零 API 调用)
-            → Gummy WebSocket(partial/final 流式结果)
+            → DashScope WebSocket(partial/final 流式结果)
             → SubtitleStore 按 sentence_id 归并
             → 透明穿透 overlay 双行字幕(灰色原文 + 白色译文)
 ```
+
+## 识别引擎(设置页可切换)
+
+| 引擎 | 模型 | 翻译 | 特点 |
+|---|---|---|---|
+| **Paraformer(默认)** | `paraformer-realtime-v2` | 句子定稿后由 `qwen-mt-turbo` 翻译回填 | 识别便宜;说话过程中字幕先显示原文,定稿约 0.3–0.5s 后替换为译文 |
+| **Gummy** | `gummy-realtime-v1` | 模型内置,partial 阶段即有译文 | 一体式延迟最低;识别+翻译分别计费 |
+
+两条链路共用同一条 WebSocket 通道与全部重连/保活逻辑,共用同一个百炼 API Key。
 
 ## 运行要求
 
