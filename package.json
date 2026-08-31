@@ -1,0 +1,83 @@
+{
+  "name": "game-voice-subtitle",
+  "productName": "GameVoiceSubtitle",
+  "version": "0.1.0",
+  "description": "Real-time translated subtitles overlay for game voice chat (WASAPI process loopback + Silero VAD + Aliyun Gummy)",
+  "main": "./out/main/index.js",
+  "author": "GameVoiceSubtitle",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "postinstall": "electron-builder install-app-deps",
+    "pack:win": "electron-vite build && electron-builder --win --x64",
+    "pack:win:zip": "electron-vite build && electron-builder --win zip --x64"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "onnxruntime-node": "^1.19.2",
+    "ws": "^8.18.0"
+  },
+  "optionalDependencies": {
+    "loopback-capture": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.5.10",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.19",
+    "electron": "^30.1.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "postcss": "^8.4.38",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.1"
+  },
+  "build": {
+    "appId": "com.gamevoicesubtitle.app",
+    "productName": "GameVoiceSubtitle",
+    "directories": {
+      "output": "dist"
+    },
+    "npmRebuild": false,
+    "files": [
+      "out/**/*",
+      "!**/node_modules/onnxruntime-node/bin/napi-v6/{darwin,linux}/**",
+      "!**/node_modules/onnxruntime-node/bin/napi-v6/win32/arm64/**"
+    ],
+    "extraResources": [
+      {
+        "from": "resources",
+        "to": "resources"
+      }
+    ],
+    "asarUnpack": [
+      "**/node_modules/loopback-capture/**",
+      "**/node_modules/onnxruntime-node/**"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    }
+  },
+  "allowScripts": {
+    "electron@30.5.1": true,
+    "esbuild@0.21.5": true,
+    "onnxruntime-node@1.29.0": true
+  }
+}

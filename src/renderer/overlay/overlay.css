@@ -1,0 +1,40 @@
+/* The overlay window is transparent + click-through; everything must stay see-through. */
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent !important;
+  overflow: hidden;
+  user-select: none;
+  cursor: default;
+}
+
+/* White text with a black outline readable on any game footage:
+   multi-directional text-shadow is more robust than -webkit-text-stroke
+   (stroke eats into thin CJK glyphs). */
+.subtitle-outline {
+  text-shadow:
+    -1px -1px 0 rgba(0, 0, 0, 0.9),
+    1px -1px 0 rgba(0, 0, 0, 0.9),
+    -1px 1px 0 rgba(0, 0, 0, 0.9),
+    1px 1px 0 rgba(0, 0, 0, 0.9),
+    0 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.subtitle-enter {
+  animation: subtitle-in 150ms ease-out;
+}
+
+@keyframes subtitle-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
